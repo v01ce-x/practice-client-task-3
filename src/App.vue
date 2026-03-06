@@ -13,6 +13,14 @@
         <h2 class="column-title">
           {{ column.title }}
           <span class="column-count">({{ getTasksCount(column.id) }})</span>
+
+          <button
+            v-if="column.id === 'planned'"
+            class="btn-add-task"
+            @click="openCreateModal"
+          >
+            + Добавить
+          </button>
         </h2>
         <div class="task-list" :data-column="column.id">
           <TaskCard
@@ -23,6 +31,11 @@
         </div>
       </section>
     </main>
+
+    <CreateTaskModal
+      v-model="showCreateModal"
+      @submit="handleCreateTask"
+    />
   </div>
 </template>
 
@@ -30,9 +43,11 @@
 import { ref, computed } from 'vue'
 import { COLUMNS } from './constants/kanban'
 import TaskCard from './components/TaskCard.vue'
+import CreateTaskModal from './components/CreateTaskModal.vue'
 
 const columns = ref(COLUMNS)
 const tasks = ref([])
+const showCreateModal = ref(false)
 
 const tasksByColumn = computed(() => {
   const result = {
@@ -41,7 +56,6 @@ const tasksByColumn = computed(() => {
     'testing': [],
     'done': []
   }
-
   tasks.value.forEach(task => {
     result[task.column].push(task)
   })
@@ -52,68 +66,51 @@ const getTasksCount = (columnId) => {
   return tasksByColumn.value[columnId].length
 }
 
-tasks.value = [
-  {
-    id: '1',
-    title: 'Разработать дизайн главной страницы',
-    description: 'Создать макет в Figma с учетом новых требований',
-    deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+const generateId = () => {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2)
+}
+
+const openCreateModal = () => {
+  showCreateModal.value = true
+}
+
+const handleCreateTask = ({ title, description, deadline }) => {
+  const newTask = {
+    id: generateId(),
+    title,
+    description,
+    deadline,
     createdAt: new Date().toISOString(),
     updatedAt: null,
     column: 'planned'
-  },
-  {
-    id: '2',
-    title: 'Реализовать авторизацию',
-    description: 'Добавить JWT токены и защиту роутов',
-    deadline: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    column: 'in-progress'
   }
-]
+
+  tasks.value.push(newTask)
+  showCreateModal.value = false
+}
 </script>
 
 <style>
-.board {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  padding: 1.5rem;
-  min-height: calc(100vh - 70px);
-  align-items: start;
-}
-
-.column {
-  background: #ebecf0;
-  border-radius: 8px;
-  padding: 0.75rem;
-  min-height: 500px;
-  display: flex;
-  flex-direction: column;
-}
-
 .column-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #5e6c84;
-  padding: 0.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
 }
 
-.column-count {
-  background: #dfe1e6;
-  color: #5e6c84;
-  padding: 0.125rem 0.5rem;
+.btn-add-task {
+  background: #0079bf;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.task-list {
-  flex: 1;
-  min-height: 100px;
-  padding: 0.25rem;
+.btn-add-task:hover {
+  background: #026aa7;
 }
 </style>
