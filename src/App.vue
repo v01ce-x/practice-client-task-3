@@ -55,13 +55,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import {ref, computed, watch, onMounted} from 'vue'
 import {COLUMN_ORDER, COLUMNS} from './constants/kanban'
 import ReturnReasonModal from './components/ReturnReasonModal.vue'
 import TaskCard from './components/TaskCard.vue'
 import CreateTaskModal from './components/CreateTaskModal.vue'
 import EditTaskModal from './components/EditTaskModal.vue'
 
+const STORAGE_KEY = 'kanban-tasks-vя1'
 const columns = ref(COLUMNS)
 const tasks = ref([])
 const showCreateModal = ref(false)
@@ -187,6 +188,22 @@ const handleCompleteTask = (taskId) => {
     task.updatedAt = new Date().toISOString()
   }
 }
+
+onMounted(() => {
+  const saved = localStorage.getItem(STORAGE_KEY)
+  if (saved) {
+    try {
+      tasks.value = JSON.parse(saved)
+    } catch (e) {
+      console.error('Ошибка загрузки данных:', e)
+      tasks.value = []
+    }
+  }
+})
+
+watch(tasks, (newTasks) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(newTasks))
+}, { deep: true })
 </script>
 
 <style>
@@ -229,5 +246,29 @@ const handleCompleteTask = (taskId) => {
 
 .btn-add-task:hover {
   background: #026aa7;
+}
+
+.btn-clear {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.btn-clear:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.column-highlight {
+  animation: highlight-pulse 1s ease;
+}
+
+@keyframes highlight-pulse {
+  0%, 100% { background: #ebecf0; }
+  50% { background: #d4e5f7; }
 }
 </style>
