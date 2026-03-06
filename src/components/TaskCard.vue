@@ -1,5 +1,12 @@
 <template>
-  <article class="task-card" :class="{ 'task-overdue': isOverdue, 'task-on-time': isOnTime }">
+  <article
+    class="task-card"
+    :class="{ 'task-overdue': isOverdue, 'task-on-time': isOnTime, 'dragging': isDragging }"
+    :draggable="!isDoneColumn"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd"
+    @dragover="handleDragOver"
+  >
     <header class="task-header">
       <h3 class="task-title">{{ task.title }}</h3>
       <span v-if="task.status" class="task-status" :class="task.status">
@@ -70,7 +77,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { COLUMN_ORDER } from '../constants/kanban.js'
 
 const props = defineProps({
@@ -80,7 +87,26 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete', 'move'])
+const emit = defineEmits(['edit', 'delete', 'move', 'dragstart', 'dragend', 'dragover'])
+
+const isDragging = ref(false)
+
+const handleDragStart = (e) => {
+  isDragging.value = true
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', props.task.id)
+  emit('dragstart', props.task)
+}
+
+const handleDragEnd = () => {
+  isDragging.value = false
+  emit('dragend')
+}
+
+const handleDragOver = (e) => {
+  e.preventDefault()
+  emit('dragover', props.task)
+}
 
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('ru-RU', {
@@ -136,12 +162,21 @@ const canMoveBack = computed(() => {
   margin-bottom: 0.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.1s;
+  transition: box-shadow 0.2s, transform 0.1s, opacity 0.2s;
+}
+
+.task-card[draggable="true"] {
+  cursor: grab;
 }
 
 .task-card:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
+}
+
+.task-card.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
 }
 
 .task-overdue {

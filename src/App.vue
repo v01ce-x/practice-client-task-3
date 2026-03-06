@@ -26,15 +26,26 @@
             + Добавить
           </button>
         </h2>
-        <div class="task-list" :data-column="column.id">
+        <div
+          class="task-list"
+          :data-column="column.id"
+          :class="{ 'drag-over': dragOverColumn === column.id }"
+          @drop="handleDrop($event, column.id)"
+          @dragover="handleDragOver($event, column.id)"
+          @dragleave="handleDragLeave"
+        >
           <TaskCard
-            v-for="task in tasksByColumn[column.id]"
+            v-for="(task, index) in tasksByColumn[column.id]"
             :key="task.id"
             :task="task"
+            :data-index="index"
             @edit="openEditModal"
             @delete="handleDeleteTask"
             @move="handleMoveTask"
             @complete="handleCompleteTask"
+            @dragstart="handleTaskDragStart"
+            @dragend="handleTaskDragEnd"
+            @dragover="() => handleTaskDragOver(column.id, index)"
           />
         </div>
       </section>
@@ -75,6 +86,9 @@ const showReturnModal = ref(false)
 const editingTask = ref(null)
 const taskToReturn = ref(null)
 const highlightColumn = ref(null)
+const draggedTask = ref(null)
+const dragOverColumn = ref(null)
+const dragOverIndex = ref(null)
 
 const tasksByColumn = computed(() => {
   const result = {
@@ -94,7 +108,7 @@ const getTasksCount = (columnId) => {
 }
 
 const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2)
+  return Date.now().toString(36) + Math.random().toString(36).slice(2)
 }
 
 const checkDeadlineStatus = (task) => {
@@ -200,6 +214,100 @@ const clearAllData = () => {
   }
 }
 
+const handleTaskDragStart = (task) => {
+  draggedTask.value = task
+}
+
+const handleTaskDragEnd = () => {
+  draggedTask.value = null
+  dragOverColumn.value = null
+  dragOverIndex.value = null
+}
+
+const handleDragOver = (e, columnId) => {
+  e.preventDefault()
+  e.dataTransfer.dropEffect = 'move'
+  dragOverColumn.value = columnId
+}
+
+const handleDragLeave = (e) => {
+  if (e.target.classList.contains('task-list')) {
+    dragOverColumn.value = null
+  }
+}
+
+const handleDrop = (e, targetColumnId) => {
+  e.preventDefault()
+
+  if (!draggedTask.value) return
+
+  if (targetColumnId === 'done') {
+    alert('Используйте кнопку "✅" для завершения задачи')
+    dragOverColumn.value = null
+    dragOverIndex.value = null
+    return
+  }
+
+  const sourceTask = draggedTask.value
+  const taskIndex = tasks.value.findIndex(t => t.id === sourceTask.id)
+
+  if (taskIndex === -1) return
+
+  const targetColumnTasks = tasksByColumn.value[targetColumnId]
+  const sourceColumnTasks = tasksByColumn.value[sourceTask.column]
+
+  if (sourceTask.column === targetColumnId) {
+    if (dragOverIndex.value !== null) {
+      const currentIndex = sourceColumnTasks.findIndex(t => t.id === sourceTask.id)
+      if (currentIndex !== dragOverIndex.value) {
+        const reorderedTasks = [...sourceColumnTasks]
+        reorderedTasks.splice(currentIndex, 1)
+        reorderedTasks.splice(dragOverIndex.value, 0, sourceTask)
+
+        const otherTasks = tasks.value.filter(t => t.column !== targetColumnId)
+        tasks.value = [...otherTasks, ...reorderedTasks]
+      }
+    }
+  } else {
+    if (targetColumnId === 'planned' && sourceTask.column !== 'planned') {
+      alert('Нельзя вернуть задачу в "Запланированные"')
+      dragOverColumn.value = null
+      dragOverIndex.value = null
+      return
+    }
+
+    if (sourceTask.column === 'testing' && targetColumnId === 'in-progress') {
+      taskToReturn.value = sourceTask
+      showReturnModal.value = true
+      dragOverColumn.value = null
+      dragOverIndex.value = null
+      return
+    }
+
+    tasks.value[taskIndex].column = targetColumnId
+    tasks.value[taskIndex].updatedAt = new Date().toISOString()
+
+    if (dragOverIndex.value !== null) {
+      const movedTask = tasks.value[taskIndex]
+      const otherTasks = tasks.value.filter(t => t.id !== movedTask.id && t.column !== targetColumnId)
+      const targetTasks = [...targetColumnTasks]
+      targetTasks.splice(dragOverIndex.value, 0, movedTask)
+      tasks.value = [...otherTasks, ...targetTasks]
+    }
+
+    highlightColumn.value = targetColumnId
+    setTimeout(() => highlightColumn.value = null, 1000)
+  }
+
+  dragOverColumn.value = null
+  dragOverIndex.value = null
+}
+
+const handleTaskDragOver = (columnId, index) => {
+  dragOverColumn.value = columnId
+  dragOverIndex.value = index
+}
+
 onMounted(() => {
   const saved = localStorage.getItem(STORAGE_KEY)
   if (saved) {
@@ -292,5 +400,17 @@ watch(tasks, (newTasks) => {
 @keyframes highlight-pulse {
   0%, 100% { background: #ebecf0; }
   50% { background: #d4e5f7; }
+}
+
+.task-list {
+  min-height: 100px;
+  flex: 1;
+  transition: background 0.2s;
+}
+
+.task-list.drag-over {
+  background: rgba(0, 121, 191, 0.1);
+  border: 2px dashed #0079bf;
+  border-radius: 4px;
 }
 </style>

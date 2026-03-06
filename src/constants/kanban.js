@@ -6,8 +6,3 @@ export const COLUMNS = [
 ]
 
 export const COLUMN_ORDER = ['planned', 'in-progress', 'testing', 'done']
-
-export const STATUS = {
-  ON_TIME: 'on-time',
-  OVERDUE: 'overdue'
-}
