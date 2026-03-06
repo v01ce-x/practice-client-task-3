@@ -29,6 +29,7 @@
             :task="task"
             @edit="openEditModal"
             @delete="handleDeleteTask"
+            @move="handleMoveTask"
           />
         </div>
       </section>
@@ -49,7 +50,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { COLUMNS } from './constants/kanban'
+import {COLUMN_ORDER, COLUMNS} from './constants/kanban'
 import TaskCard from './components/TaskCard.vue'
 import CreateTaskModal from './components/CreateTaskModal.vue'
 import EditTaskModal from './components/EditTaskModal.vue'
@@ -122,6 +123,31 @@ const handleEditTask = ({ id, title, description, deadline }) => {
 const handleDeleteTask = (taskId) => {
   if (confirm('Вы уверены, что хотите удалить эту задачу?')) {
     tasks.value = tasks.value.filter(t => t.id !== taskId)
+  }
+}
+
+const handleMoveTask = (taskId, direction) => {
+  const taskIndex = tasks.value.findIndex(t => t.id === taskId)
+  if (taskIndex === -1) return
+
+  const task = tasks.value[taskIndex]
+  const currentIndex = COLUMN_ORDER.indexOf(task.column)
+
+  if (direction === 'forward' && currentIndex < COLUMN_ORDER.length - 1) {
+    if (task.column === 'in-progress') {
+      task.column = 'testing'
+    } else if (task.column === 'planned') {
+      task.column = 'in-progress'
+    }
+    task.updatedAt = new Date().toISOString()
+
+  } else if (direction === 'back' && task.column === 'testing') {
+    const reason = prompt('Укажите причину возврата задачи:')
+    if (reason) {
+      task.column = 'in-progress'
+      task.returnReason = reason
+      task.updatedAt = new Date().toISOString()
+    }
   }
 }
 </script>

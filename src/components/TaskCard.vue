@@ -39,12 +39,31 @@
       >
         🗑️
       </button>
+
+      <!-- Кнопки перемещения -->
+      <button
+        v-if="canMoveForward"
+        class="btn-action btn-move"
+        @click="emit('move', task.id, 'forward')"
+        title="Переместить вперед"
+      >
+        ➡️
+      </button>
+      <button
+        v-if="canMoveBack"
+        class="btn-action btn-move"
+        @click="emit('move', task.id, 'back')"
+        title="Вернуть назад"
+      >
+        ⬅️
+      </button>
     </div>
   </article>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { COLUMN_ORDER } from '@/constants/kanban'
 
 const props = defineProps({
   task: {
@@ -53,7 +72,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete'])
+const emit = defineEmits(['edit', 'delete', 'move'])
 
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('ru-RU', {
@@ -85,6 +104,18 @@ const isDeadlineSoon = computed(() => {
 
 const isDoneColumn = computed(() => {
   return props.task.column === 'done'
+})
+
+const currentIndex = computed(() => {
+  return COLUMN_ORDER.indexOf(props.task.column)
+})
+
+const canMoveForward = computed(() => {
+  return currentIndex.value < COLUMN_ORDER.length - 1 && props.task.column !== 'testing'
+})
+
+const canMoveBack = computed(() => {
+  return currentIndex.value > 0 && props.task.column === 'testing'
 })
 </script>
 
@@ -221,5 +252,14 @@ const isDoneColumn = computed(() => {
 
 .btn-delete:hover {
   background: #ffebe6;
+}
+
+.btn-move {
+  background: #e3fcef;
+  color: #006644;
+}
+
+.btn-move:hover {
+  background: #b3f5da;
 }
 </style>
