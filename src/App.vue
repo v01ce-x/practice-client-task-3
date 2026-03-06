@@ -30,6 +30,7 @@
             @edit="openEditModal"
             @delete="handleDeleteTask"
             @move="handleMoveTask"
+            @complete="handleCompleteTask"
           />
         </div>
       </section>
@@ -135,6 +136,18 @@ const handleDeleteTask = (taskId) => {
 const showReturnModal = ref(false)
 const taskToReturn = ref(null)
 
+const checkDeadlineStatus = (task) => {
+  if (!task.deadline) return 'on-time'
+
+  const deadline = new Date(task.deadline)
+  const now = new Date()
+
+  if (deadline < now) {
+    return 'overdue'
+  }
+  return 'on-time'
+}
+
 const handleMoveTask = (taskId, direction) => {
   const task = tasks.value.find(t => t.id === taskId)
   if (!task) return
@@ -146,6 +159,7 @@ const handleMoveTask = (taskId, direction) => {
       task.column = 'testing'
     } else if (task.column === 'testing') {
       task.column = 'done'
+      task.status = checkDeadlineStatus(task)
     }
     task.updatedAt = new Date().toISOString()
   } else if (direction === 'back' && task.column === 'testing') {
@@ -160,6 +174,17 @@ const handleReturnTask = (reason) => {
     taskToReturn.value.returnReason = reason
     taskToReturn.value.updatedAt = new Date().toISOString()
     taskToReturn.value = null
+  }
+}
+
+const handleCompleteTask = (taskId) => {
+  const task = tasks.value.find(t => t.id === taskId)
+  if (!task) return
+
+  if (confirm('Завершить задачу и переместить в "Выполнено"?')) {
+    task.column = 'done'
+    task.status = checkDeadlineStatus(task)
+    task.updatedAt = new Date().toISOString()
   }
 }
 </script>

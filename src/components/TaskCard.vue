@@ -57,6 +57,14 @@
       >
         ⬅️
       </button>
+      <button
+        v-if="task.column === 'testing'"
+        class="btn-action btn-complete"
+        @click="emit('complete', task.id)"
+        title="Завершить задачу"
+      >
+        ✅
+      </button>
     </div>
   </article>
 </template>
@@ -111,11 +119,12 @@ const currentIndex = computed(() => {
 })
 
 const canMoveForward = computed(() => {
-  return currentIndex.value < COLUMN_ORDER.length - 1 && props.task.column !== 'testing'
+  const canMove = currentIndex.value < COLUMN_ORDER.length - 1
+  return canMove && props.task.column !== 'testing'
 })
 
 const canMoveBack = computed(() => {
-  return currentIndex.value > 0 && props.task.column === 'testing'
+  return props.task.column === 'testing'
 })
 </script>
 
