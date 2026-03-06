@@ -27,6 +27,8 @@
             v-for="task in tasksByColumn[column.id]"
             :key="task.id"
             :task="task"
+            @edit="openEditModal"
+            @delete="handleDeleteTask"
           />
         </div>
       </section>
@@ -36,6 +38,12 @@
       v-model="showCreateModal"
       @submit="handleCreateTask"
     />
+
+    <EditTaskModal
+      v-model="showEditModal"
+      :task="editingTask"
+      @submit="handleEditTask"
+    />
   </div>
 </template>
 
@@ -44,10 +52,13 @@ import { ref, computed } from 'vue'
 import { COLUMNS } from './constants/kanban'
 import TaskCard from './components/TaskCard.vue'
 import CreateTaskModal from './components/CreateTaskModal.vue'
+import EditTaskModal from './components/EditTaskModal.vue'
 
 const columns = ref(COLUMNS)
 const tasks = ref([])
 const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const editingTask = ref(null)
 
 const tasksByColumn = computed(() => {
   const result = {
@@ -74,6 +85,11 @@ const openCreateModal = () => {
   showCreateModal.value = true
 }
 
+const openEditModal = (task) => {
+  editingTask.value = task
+  showEditModal.value = true
+}
+
 const handleCreateTask = ({ title, description, deadline }) => {
   const newTask = {
     id: generateId(),
@@ -88,9 +104,47 @@ const handleCreateTask = ({ title, description, deadline }) => {
   tasks.value.push(newTask)
   showCreateModal.value = false
 }
+
+const handleEditTask = ({ id, title, description, deadline }) => {
+  const taskIndex = tasks.value.findIndex(t => t.id === id)
+  if (taskIndex !== -1) {
+    tasks.value[taskIndex] = {
+      ...tasks.value[taskIndex],
+      title,
+      description,
+      deadline,
+      updatedAt: new Date().toISOString()
+    }
+  }
+  showEditModal.value = false
+}
+
+const handleDeleteTask = (taskId) => {
+  if (confirm('Вы уверены, что хотите удалить эту задачу?')) {
+    tasks.value = tasks.value.filter(t => t.id !== taskId)
+  }
+}
 </script>
 
 <style>
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  padding: 1.5rem;
+  min-height: calc(100vh - 70px);
+  align-items: start;
+}
+
+.column {
+  background: #ebecf0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
 .column-title {
   display: flex;
   justify-content: space-between;

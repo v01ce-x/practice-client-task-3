@@ -26,6 +26,20 @@
     <div v-if="task.returnReason" class="task-return-reason">
       <small>↩ Возврат: {{ task.returnReason }}</small>
     </div>
+
+    <div class="task-actions" v-if="!isDoneColumn">
+      <button class="btn-action btn-edit" @click="emit('edit', task)" title="Редактировать">
+        ✏️
+      </button>
+      <button
+        v-if="task.column === 'planned'"
+        class="btn-action btn-delete"
+        @click="emit('delete', task.id)"
+        title="Удалить"
+      >
+        🗑️
+      </button>
+    </div>
   </article>
 </template>
 
@@ -38,6 +52,8 @@ const props = defineProps({
     required: true
   }
 })
+
+const emit = defineEmits(['edit', 'delete'])
 
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('ru-RU', {
@@ -65,6 +81,10 @@ const isDeadlineSoon = computed(() => {
   const now = new Date()
   const diffDays = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   return diffDays <= 2 && diffDays >= 0
+})
+
+const isDoneColumn = computed(() => {
+  return props.task.column === 'done'
 })
 </script>
 
@@ -174,5 +194,32 @@ const isDeadlineSoon = computed(() => {
   border-top: 1px solid #dfe1e6;
   color: #ff5630;
   font-size: 0.75rem;
+}
+
+.task-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #dfe1e6;
+  justify-content: flex-end;
+}
+
+.btn-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+
+.btn-action:hover {
+  background: #f4f5f7;
+}
+
+.btn-delete:hover {
+  background: #ffebe6;
 }
 </style>
