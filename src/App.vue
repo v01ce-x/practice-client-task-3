@@ -2,6 +2,9 @@
   <div id="app">
     <header class="app-header">
       <h1>Kanban Board</h1>
+      <button @click="clearAllData" class="btn-clear" title="Очистить все данные">
+        🗑️ Очистить всё
+      </button>
     </header>
     <main class="board">
       <section
@@ -9,6 +12,7 @@
         :key="column.id"
         class="column"
         :data-column="column.id"
+        :class="{ 'column-highlight': highlightColumn === column.id }"
       >
         <h2 class="column-title">
           {{ column.title }}
@@ -55,19 +59,22 @@
 </template>
 
 <script setup>
-import {ref, computed, watch, onMounted} from 'vue'
-import {COLUMN_ORDER, COLUMNS} from './constants/kanban'
-import ReturnReasonModal from './components/ReturnReasonModal.vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { COLUMNS } from './constants/kanban'
 import TaskCard from './components/TaskCard.vue'
 import CreateTaskModal from './components/CreateTaskModal.vue'
 import EditTaskModal from './components/EditTaskModal.vue'
+import ReturnReasonModal from './components/ReturnReasonModal.vue'
 
-const STORAGE_KEY = 'kanban-tasks-vя1'
+const STORAGE_KEY = 'kanban-tasks-v1'
 const columns = ref(COLUMNS)
 const tasks = ref([])
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
+const showReturnModal = ref(false)
 const editingTask = ref(null)
+const taskToReturn = ref(null)
+const highlightColumn = ref(null)
 
 const tasksByColumn = computed(() => {
   const result = {
@@ -88,6 +95,13 @@ const getTasksCount = (columnId) => {
 
 const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2)
+}
+
+const checkDeadlineStatus = (task) => {
+  if (!task.deadline) return 'on-time'
+  const deadline = new Date(task.deadline)
+  const now = new Date()
+  return deadline < now ? 'overdue' : 'on-time'
 }
 
 const openCreateModal = () => {
@@ -112,6 +126,8 @@ const handleCreateTask = ({ title, description, deadline }) => {
 
   tasks.value.push(newTask)
   showCreateModal.value = false
+  highlightColumn.value = 'planned'
+  setTimeout(() => highlightColumn.value = null, 1000)
 }
 
 const handleEditTask = ({ id, title, description, deadline }) => {
@@ -134,21 +150,6 @@ const handleDeleteTask = (taskId) => {
   }
 }
 
-const showReturnModal = ref(false)
-const taskToReturn = ref(null)
-
-const checkDeadlineStatus = (task) => {
-  if (!task.deadline) return 'on-time'
-
-  const deadline = new Date(task.deadline)
-  const now = new Date()
-
-  if (deadline < now) {
-    return 'overdue'
-  }
-  return 'on-time'
-}
-
 const handleMoveTask = (taskId, direction) => {
   const task = tasks.value.find(t => t.id === taskId)
   if (!task) return
@@ -158,23 +159,13 @@ const handleMoveTask = (taskId, direction) => {
       task.column = 'in-progress'
     } else if (task.column === 'in-progress') {
       task.column = 'testing'
-    } else if (task.column === 'testing') {
-      task.column = 'done'
-      task.status = checkDeadlineStatus(task)
     }
     task.updatedAt = new Date().toISOString()
+    highlightColumn.value = task.column
+    setTimeout(() => highlightColumn.value = null, 1000)
   } else if (direction === 'back' && task.column === 'testing') {
     taskToReturn.value = task
     showReturnModal.value = true
-  }
-}
-
-const handleReturnTask = (reason) => {
-  if (taskToReturn.value) {
-    taskToReturn.value.column = 'in-progress'
-    taskToReturn.value.returnReason = reason
-    taskToReturn.value.updatedAt = new Date().toISOString()
-    taskToReturn.value = null
   }
 }
 
@@ -186,6 +177,26 @@ const handleCompleteTask = (taskId) => {
     task.column = 'done'
     task.status = checkDeadlineStatus(task)
     task.updatedAt = new Date().toISOString()
+    highlightColumn.value = 'done'
+    setTimeout(() => highlightColumn.value = null, 1000)
+  }
+}
+
+const handleReturnTask = (reason) => {
+  if (taskToReturn.value) {
+    taskToReturn.value.column = 'in-progress'
+    taskToReturn.value.returnReason = reason
+    taskToReturn.value.updatedAt = new Date().toISOString()
+    taskToReturn.value = null
+    highlightColumn.value = 'in-progress'
+    setTimeout(() => highlightColumn.value = null, 1000)
+  }
+}
+
+const clearAllData = () => {
+  if (confirm('Вы уверены, что хотите удалить ВСЕ задачи?')) {
+    tasks.value = []
+    localStorage.removeItem(STORAGE_KEY)
   }
 }
 
@@ -207,6 +218,12 @@ watch(tasks, (newTasks) => {
 </script>
 
 <style>
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
 .board {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -249,10 +266,10 @@ watch(tasks, (newTasks) => {
 }
 
 .btn-clear {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background-color: rgb(218, 218, 218);
+  color: black;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 0.5rem 1rem;
+  padding: 0 3rem;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.85rem;
@@ -260,7 +277,12 @@ watch(tasks, (newTasks) => {
 }
 
 .btn-clear:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background-color: rgb(204, 204, 204);
+}
+
+.btn-clear:active {
+  background-color: rgb(122, 122, 122);
+  color: white;
 }
 
 .column-highlight {
