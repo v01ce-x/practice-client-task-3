@@ -45,12 +45,18 @@
       :task="editingTask"
       @submit="handleEditTask"
     />
+
+    <ReturnReasonModal
+      v-model="showReturnModal"
+      @submit="handleReturnTask"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import {COLUMN_ORDER, COLUMNS} from './constants/kanban'
+import ReturnReasonModal from './components/ReturnReasonModal.vue'
 import TaskCard from './components/TaskCard.vue'
 import CreateTaskModal from './components/CreateTaskModal.vue'
 import EditTaskModal from './components/EditTaskModal.vue'
@@ -126,28 +132,34 @@ const handleDeleteTask = (taskId) => {
   }
 }
 
+const showReturnModal = ref(false)
+const taskToReturn = ref(null)
+
 const handleMoveTask = (taskId, direction) => {
-  const taskIndex = tasks.value.findIndex(t => t.id === taskId)
-  if (taskIndex === -1) return
+  const task = tasks.value.find(t => t.id === taskId)
+  if (!task) return
 
-  const task = tasks.value[taskIndex]
-  const currentIndex = COLUMN_ORDER.indexOf(task.column)
-
-  if (direction === 'forward' && currentIndex < COLUMN_ORDER.length - 1) {
-    if (task.column === 'in-progress') {
-      task.column = 'testing'
-    } else if (task.column === 'planned') {
+  if (direction === 'forward') {
+    if (task.column === 'planned') {
       task.column = 'in-progress'
+    } else if (task.column === 'in-progress') {
+      task.column = 'testing'
+    } else if (task.column === 'testing') {
+      task.column = 'done'
     }
     task.updatedAt = new Date().toISOString()
-
   } else if (direction === 'back' && task.column === 'testing') {
-    const reason = prompt('Укажите причину возврата задачи:')
-    if (reason) {
-      task.column = 'in-progress'
-      task.returnReason = reason
-      task.updatedAt = new Date().toISOString()
-    }
+    taskToReturn.value = task
+    showReturnModal.value = true
+  }
+}
+
+const handleReturnTask = (reason) => {
+  if (taskToReturn.value) {
+    taskToReturn.value.column = 'in-progress'
+    taskToReturn.value.returnReason = reason
+    taskToReturn.value.updatedAt = new Date().toISOString()
+    taskToReturn.value = null
   }
 }
 </script>

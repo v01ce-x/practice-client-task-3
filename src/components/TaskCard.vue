@@ -63,7 +63,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { COLUMN_ORDER } from '@/constants/kanban'
+import { COLUMN_ORDER } from '../constants/kanban.js'
 
 const props = defineProps({
   task: {
