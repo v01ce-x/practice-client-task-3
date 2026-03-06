@@ -14,22 +14,64 @@
           {{ column.title }}
           <span class="column-count">({{ getTasksCount(column.id) }})</span>
         </h2>
-        <div class="task-list" :data-column="column.id"></div>
+        <div class="task-list" :data-column="column.id">
+          <TaskCard
+            v-for="task in tasksByColumn[column.id]"
+            :key="task.id"
+            :task="task"
+          />
+        </div>
       </section>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { COLUMNS } from './constants/kanban.js'
+import { ref, computed } from 'vue'
+import { COLUMNS } from './constants/kanban'
+import TaskCard from './components/TaskCard.vue'
 
 const columns = ref(COLUMNS)
 const tasks = ref([])
 
+const tasksByColumn = computed(() => {
+  const result = {
+    'planned': [],
+    'in-progress': [],
+    'testing': [],
+    'done': []
+  }
+
+  tasks.value.forEach(task => {
+    result[task.column].push(task)
+  })
+  return result
+})
+
 const getTasksCount = (columnId) => {
-  return tasks.value.filter(t => t.column === columnId).length
+  return tasksByColumn.value[columnId].length
 }
+
+tasks.value = [
+  {
+    id: '1',
+    title: 'Разработать дизайн главной страницы',
+    description: 'Создать макет в Figma с учетом новых требований',
+    deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: null,
+    column: 'planned'
+  },
+  {
+    id: '2',
+    title: 'Реализовать авторизацию',
+    description: 'Добавить JWT токены и защиту роутов',
+    deadline: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    column: 'in-progress'
+  }
+]
 </script>
 
 <style>
